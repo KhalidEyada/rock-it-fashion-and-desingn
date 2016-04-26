@@ -1,0 +1,320 @@
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+const int trig1 = 7;
+const int echo1 = 8;
+int led_right = 24;
+int led_left = 28;
+int led_behind = 34;
+int buzzer = 38 ;
+
+const int trig2 = 9;
+const int echo2 = 10;
+
+const int trig3 = 11;
+const int echo3 = 12;
+void setup() {
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  // Print a message to the LCD.
+  
+  Serial.begin(9600);
+}
+
+void loop() {
+
+  long duration1, inches1, cm1, duration2, inches2, cm2, duration3, inches3, cm3;
+
+
+pinMode (led_right , OUTPUT );
+pinMode (led_left , OUTPUT );
+pinMode (led_behind , OUTPUT );
+pinMode (buzzer , OUTPUT );
+  pinMode(trig1, OUTPUT);
+  digitalWrite(trig1, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig1, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(trig1, LOW);
+  pinMode(echo1, INPUT);
+  duration1 = pulseIn(echo1, HIGH);
+
+
+  pinMode(trig2, OUTPUT);
+  digitalWrite(trig2, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig2, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(trig2, LOW);
+  pinMode(echo2, INPUT);
+  duration2 = pulseIn(echo2, HIGH);
+
+  pinMode(trig3, OUTPUT);
+  digitalWrite(trig3, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig3, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(trig3, LOW);
+  pinMode(echo3, INPUT);
+  duration3 = pulseIn(echo3, HIGH);
+  
+  cm1 = microsecondsToCentimeters(duration1);
+  cm2 = microsecondsToCentimeters(duration2);
+  cm3 = microsecondsToCentimeters(duration3);
+
+  if ( cm1 <= 30 )
+  {
+     Serial.println("dngerous from behind");
+      Serial.print(cm1);
+  Serial.println("cm1");
+
+     digitalWrite(led_behind , 1 );
+     digitalWrite(buzzer , 1 );
+      lcd.print("dngerous from behind");
+  }
+  else
+  {
+    digitalWrite(led_behind , 0 );
+      digitalWrite(buzzer , 0 );
+  }
+   if ( cm2 <= 30 )
+  {
+     Serial.println("dangerous from your right");
+     digitalWrite(led_right , 1 );
+       digitalWrite(buzzer , 1 );
+        Serial.print(cm2);
+  Serial.println("cm2");
+   lcd.print("dngerous from right");
+  }
+  else
+  {
+    digitalWrite(led_right , 0 );
+      digitalWrite(buzzer , 0 );
+  }
+  if ( cm3 <= 30 )
+  {
+     Serial.println("dngerous from left");
+     digitalWrite(led_left , 1 );
+       digitalWrite(buzzer , 1 );
+       Serial.print(cm3);
+  Serial.println("cm3");
+  lcd.print("dngerous from left");
+  }
+  else 
+  {
+    digitalWrite(led_left , 0 );
+      digitalWrite(buzzer , 0 );
+  }
+
+ 
+ 
+
+ delay(100);
+  
+}
+long microsecondsToCentimeters(long microseconds1) {
+ 
+  return microseconds1 / 29 / 2;
+}
+////////////////////////////
+#include <LiquidCrystal.h>
+
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+int sensorPin = 0;
+double alpha = 0.75;
+int period = 100;
+double change = 0.0;
+double minval = 0.0;
+
+void setup ()
+{
+   // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  // Print a message to the LCD.
+ 
+  Serial.begin (9600);
+  
+}
+void loop ()
+{
+    static double oldValue = 0;
+    static double oldChange = 0;
+ 
+    int rawValue = analogRead (sensorPin);
+    double value = alpha * oldValue + (1 - alpha) * rawValue;
+ int heart_rate = 1100 - rawValue ;
+    Serial.println (heart_rate);
+    
+   if ( heart_rate >= 85 )
+   {
+      Serial.println (heart_rate);
+       lcd.print(heart_rate);
+   }
+     if ( heart_rate <=70 )
+   {
+     lcd.print(heart_rate);
+      Serial.println (heart_rate);
+   }
+    oldValue = value;
+ 
+    delay (period);
+}
+////////////////////////////////////
+String in;  // in is msg coming from wifi module.
+String out;  // out is msg sent to wifi module.
+int hr = 0;
+void setup()
+{
+  Serial.begin(115200);
+  Serial1.begin(115200);
+  Serial1.print("AT+CIPMUX=1");
+  delay(1000);
+  while(!Serial1.available());
+  in = Serial1.readStringUntil(char(13));
+  Serial.print(in);
+  Serial1.print("AT+CIPSERVER=1,80");
+  delay(1000);
+  while(!Serial1.available());
+  in = Serial1.readStringUntil(char(13));
+  Serial.print(in);
+  webServer(120);
+}
+
+void loop() {
+  if (Serial.available() > 0)
+  {
+    out = Serial.readStringUntil(char(13));
+    webServer(120);
+    Serial1.println(out);
+    
+    Serial.print(">> ");
+    Serial.println(out);
+  }
+  
+  
+  if (Serial1.available() > 0)
+  {
+    in = Serial1.readStringUntil(char(13));
+    Serial.print(in);
+    
+  }
+  
+  
+}
+
+void http(String str)
+{
+  Serial1.print("AT+CIPSEND=0," + String(str.length()+2));
+  delay(300);
+  Serial1.print(str);
+  
+  Serial1.print(char(13));
+  Serial1.print(char(10));
+  delay(300);
+}
+
+void webServer(int heartbeat)
+{
+  String str = "<html><title>IT ROCK</title>";
+  str += "<body><h3>Astrnaut Sensor Data</h3>";
+  str += "<h2>" + String(heartbeat) + "</h2></body></html>";
+  
+  http(str);
+//  Serial.println("SENDING:"+str); // SerialMonitor
+  delay(1000);
+  Serial1.print("AT+CIPCLOSE=0");
+}
+////////////////////////
+
+#include <SPI.h>
+
+#define LOG_PERIOD 15000     //Logging period in milliseconds, recommended value 15000-60000.
+
+#define MAX_PERIOD 60000    //Maximum logging period
+
+unsigned long counts;             //variable for GM Tube events
+
+unsigned long cpm;                 //variable for CPM
+
+unsigned int multiplier;             //variable for calculation CPM in this sketch
+
+unsigned long previousMillis;      //variable for time measurement
+
+ 
+
+void tube_impulse(){               //procedure for capturing events from Geiger Kit
+
+  counts++;
+
+}
+
+
+
+void setup(){                                               //setup procedure
+
+  counts = 0;
+
+  cpm = 0;
+
+  multiplier = MAX_PERIOD / LOG_PERIOD;      //calculating multiplier, depend on your log period
+
+  Serial.begin(9600);                                    // start serial monitor
+
+ // uncommennt if you have time-out problem to connect with Radiation Logger
+ //  delay(2000);
+ //  Serial.write('0');                                      // sending zero to avoid connection time out with radiation logger
+ //  delay(2000);
+ //  Serial.write('0');                                     // sending zero to avoid connection time out with radiation logger
+
+  pinMode(2, INPUT);                                   // set pin INT0 input for capturing GM Tube events
+
+  digitalWrite(2, HIGH);                                 // turn on internal pullup resistors, solder C-INT on the PCB
+
+  attachInterrupt(0, tube_impulse, FALLING);  //define external interrupts
+
+}
+
+ 
+
+void loop(){                                               //main cycle
+
+  unsigned long currentMillis = millis();
+
+  if(currentMillis - previousMillis > LOG_PERIOD){
+
+    previousMillis = currentMillis;
+
+    cpm = counts * multiplier;
+
+        Serial.print(cpm);                              // send cpm data to Radiation Logger
+
+        Serial.write(' ');                                // send null character to separate next data
+
+    counts = 0;
+
+  }
+
+}
+////////////////////////////////////////////////////////////////////////////////
+plotly graph("username", "api_key", tokens, "filename", nTraces);
+graph.init();
+graph.openStream();
+void loop() {
+    int airquality_value = analogRead(airquality_sensor_pin);
+    int gas_value = analogRead(gas_sensor_pin);
+    volume = (float)gas_value/1024*5.0*1000;
+    graph.plot(millis(), airquality_value, tokens[0]);
+    graph.plot(millis(), volume, tokens[1]);
+    delay(50);
+}
+var plotly = require('plotly')("username", "api_key");
+var init_data = [{
+    x : [],
+    y : [],
+    stream : {
+        token : 'streamtoken',
+        maxpoints : 5000
+    }
+}];
+
